@@ -150,7 +150,8 @@
       y: spawn.y,
       dir: "left",
       want: "left",
-      speed: 105
+      speed: 105,
+      decisionTileKey: null
     };
   }
 
@@ -162,7 +163,8 @@
       y: spawn.y,
       dir,
       speed: 95,
-      eatenTimer: 0
+      eatenTimer: 0,
+      decisionTileKey: null
     };
   }
 
@@ -227,6 +229,25 @@
     return passable(nextC, nextR);
   }
 
+  function tileKeyFor(entity) {
+    const tile = pxToTile(entity.x, entity.y);
+    return `${tile.c},${tile.r}`;
+  }
+
+  function onDecisionTile(entity, callback) {
+    if (!nearCenter(entity)) {
+      return false;
+    }
+    const key = tileKeyFor(entity);
+    if (entity.decisionTileKey === key) {
+      return false;
+    }
+    snapToTileCenter(entity);
+    entity.decisionTileKey = key;
+    callback();
+    return true;
+  }
+
   function snapToTileCenter(entity) {
     const tile = pxToTile(entity.x, entity.y);
     const center = centerOf(tile.c, tile.r);
@@ -249,15 +270,17 @@
   function pacmanStep(dt) {
     const p = state.pacman;
     alignPerpendicular(p);
-    const centered = nearCenter(p);
-    if (centered) {
-      snapToTileCenter(p);
+    let blocked = false;
+    onDecisionTile(p, () => {
       if (canMove(p, p.want)) {
         p.dir = p.want;
       }
       if (!canMove(p, p.dir)) {
-        return;
+        blocked = true;
       }
+    });
+    if (blocked) {
+      return;
     }
     moveEntity(p, p.speed + state.level * 3, dt);
   }
@@ -357,19 +380,19 @@
         ghost.x = base.x;
         ghost.y = base.y;
         ghost.dir = base.dir;
+        ghost.decisionTileKey = null;
       }
       return;
     }
 
     const mode = currentMode();
     alignPerpendicular(ghost);
-    if (nearCenter(ghost)) {
-      snapToTileCenter(ghost);
+    onDecisionTile(ghost, () => {
       chooseGhostDirection(ghost, mode);
       if (!canMove(ghost, ghost.dir)) {
         ghost.dir = OPPOSITE[ghost.dir];
       }
-    }
+    });
 
     const speed = mode === "frightened" ? ghost.speed * 0.7 : ghost.speed + state.level * 2;
     moveEntity(ghost, speed, dt);
