@@ -5,6 +5,7 @@
   const ROWS = 31;
   const WIDTH = COLS * TILE;
   const HEIGHT = ROWS * TILE;
+  const CENTER_EPSILON = 0.5;
 
   const MAP_TEMPLATE = [
     "############################",
@@ -205,7 +206,7 @@
   function nearCenter(entity) {
     const tile = pxToTile(entity.x, entity.y);
     const center = centerOf(tile.c, tile.r);
-    return Math.abs(center.x - entity.x) < 2 && Math.abs(center.y - entity.y) < 2;
+    return Math.abs(center.x - entity.x) <= CENTER_EPSILON && Math.abs(center.y - entity.y) <= CENTER_EPSILON;
   }
 
   function canMove(entity, dirName) {
