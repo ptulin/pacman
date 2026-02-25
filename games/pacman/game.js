@@ -151,10 +151,15 @@
     return {
       x: spawn.x,
       y: spawn.y,
+      tileC: 14,
+      tileR: 23,
+      nextC: 14,
+      nextR: 23,
+      moving: false,
+      progress: 0,
       dir: "left",
       want: "left",
-      speed: 72,
-      decisionTileKey: null
+      speedTiles: 3
     };
   }
 
@@ -235,53 +240,95 @@
     return passable(nextC, nextR);
   }
 
-  function pacmanCanMove(entity, dirName) {
+  function getPacmanNextTile(col, row, dirName) {
     const dir = DIRS[dirName];
-    const tile = pxToTile(entity.x, entity.y);
-    const nextC = tile.c + dir.x;
-    const nextR = tile.r + dir.y;
+    let nextC = col + dir.x;
+    const nextR = row + dir.y;
+
     if (nextR < 0 || nextR >= ROWS) {
-      return false;
+      return null;
     }
+
     if (nextC < 0 || nextC >= COLS) {
-      return WRAP_ROWS.has(tile.r);
+      if (!WRAP_ROWS.has(row)) {
+        return null;
+      }
+      nextC = nextC < 0 ? COLS - 1 : 0;
     }
-    return Boolean(PACMAN_WALKABLE[nextR] && PACMAN_WALKABLE[nextR][nextC]);
+
+    if (!PACMAN_WALKABLE[nextR][nextC]) {
+      return null;
+    }
+
+    return { c: nextC, r: nextR };
   }
 
-  function movePacman(entity, speed, dt) {
-    let remaining = speed * dt;
-    const step = 1.5;
-    while (remaining > 0) {
-      const move = Math.min(step, remaining);
-      const dir = DIRS[entity.dir];
-      const nextX = entity.x + dir.x * move;
-      const nextY = entity.y + dir.y * move;
-      const nextC = Math.floor(nextX / TILE);
-      const nextR = Math.floor(nextY / TILE);
+  function pacmanCanMove(entity, dirName) {
+    return Boolean(getPacmanNextTile(entity.tileC, entity.tileR, dirName));
+  }
 
-      if (nextR < 0 || nextR >= ROWS) {
-        break;
-      }
-
-      if (nextC < 0 || nextC >= COLS) {
-        if (!WRAP_ROWS.has(nextR)) {
-          break;
-        }
-        entity.x = nextC < 0 ? WIDTH + TILE / 2 : -TILE / 2;
-        entity.y = nextY;
-        remaining -= move;
-        continue;
-      }
-
-      if (!PACMAN_WALKABLE[nextR][nextC]) {
-        break;
-      }
-
-      entity.x = nextX;
-      entity.y = nextY;
-      remaining -= move;
+  function startPacmanMove(entity, dirName) {
+    const next = getPacmanNextTile(entity.tileC, entity.tileR, dirName);
+    if (!next) {
+      return false;
     }
+    entity.dir = dirName;
+    entity.nextC = next.c;
+    entity.nextR = next.r;
+    entity.progress = 0;
+    entity.moving = true;
+    return true;
+  }
+
+  function syncPacmanPosition(entity) {
+    if (!entity.moving) {
+      const center = centerOf(entity.tileC, entity.tileR);
+      entity.x = center.x;
+      entity.y = center.y;
+      return;
+    }
+    const from = centerOf(entity.tileC, entity.tileR);
+    const to = centerOf(entity.nextC, entity.nextR);
+    if (entity.tileR === entity.nextR && Math.abs(entity.nextC - entity.tileC) > 1) {
+      // Render tunnel wrapping via off-screen edge instead of crossing the full map width.
+      const edgeX = entity.dir === "left" ? -TILE / 2 : WIDTH + TILE / 2;
+      entity.x = from.x + (edgeX - from.x) * entity.progress;
+      entity.y = from.y;
+      return;
+    }
+    entity.x = from.x + (to.x - from.x) * entity.progress;
+    entity.y = from.y + (to.y - from.y) * entity.progress;
+  }
+
+  function movePacman(entity, tilesToTravel) {
+    let remaining = tilesToTravel;
+    while (remaining > 0) {
+      if (!entity.moving) {
+        if (!startPacmanMove(entity, entity.want)) {
+          if (!startPacmanMove(entity, entity.dir)) {
+            break;
+          }
+        }
+      }
+
+      const step = Math.min(remaining, 1 - entity.progress);
+      entity.progress += step;
+      remaining -= step;
+
+      if (entity.progress >= 0.999999) {
+        entity.tileC = entity.nextC;
+        entity.tileR = entity.nextR;
+        entity.progress = 0;
+        entity.moving = false;
+      }
+    }
+    syncPacmanPosition(entity);
+  }
+
+  function pacmanStep(dt) {
+    const p = state.pacman;
+    const speedTiles = p.speedTiles + (state.level - 1) * 0.08;
+    movePacman(p, speedTiles * dt);
   }
 
   function tileKeyFor(entity) {
@@ -323,47 +370,6 @@
     } else if (entity.x > WIDTH + TILE / 2) {
       entity.x = canWrap ? -TILE / 2 : WIDTH - TILE / 2;
     }
-  }
-
-  function pacmanStep(dt) {
-    const p = state.pacman;
-
-    // Allow immediate reverse even between decision points.
-    if (p.want === OPPOSITE[p.dir] && pacmanCanMove(p, p.want)) {
-      p.dir = p.want;
-    }
-
-    let blocked = false;
-    onDecisionTile(p, () => {
-      if (pacmanCanMove(p, p.want)) {
-        p.dir = p.want;
-      }
-      if (!pacmanCanMove(p, p.dir)) {
-        blocked = true;
-      }
-    });
-    if (blocked) {
-      // Recovery path for corner-lock cases: re-center and re-evaluate exits.
-      snapToTileCenter(p);
-      p.decisionTileKey = null;
-      if (pacmanCanMove(p, p.want)) {
-        p.dir = p.want;
-      } else if (!pacmanCanMove(p, p.dir)) {
-        const back = OPPOSITE[p.dir];
-        if (pacmanCanMove(p, back)) {
-          p.dir = back;
-        } else {
-          return;
-        }
-      } else {
-        return;
-      }
-    }
-    if (!pacmanCanMove(p, p.dir)) {
-      return;
-    }
-    const speed = p.speed + state.level;
-    movePacman(p, speed, dt);
   }
 
   function currentMode() {
@@ -480,14 +486,14 @@
   }
 
   function consumePellet() {
-    const tile = pxToTile(state.pacman.x, state.pacman.y);
-    const val = state.grid[tile.r] && state.grid[tile.r][tile.c];
+    const p = state.pacman;
+    const val = state.grid[p.tileR] && state.grid[p.tileR][p.tileC];
     if (val === ".") {
-      state.grid[tile.r][tile.c] = " ";
+      state.grid[p.tileR][p.tileC] = " ";
       state.pelletsLeft -= 1;
       state.score += 10;
     } else if (val === "o") {
-      state.grid[tile.r][tile.c] = " ";
+      state.grid[p.tileR][p.tileC] = " ";
       state.pelletsLeft -= 1;
       state.score += 50;
       state.frightenedTimer = 7;
@@ -711,8 +717,6 @@
     const dir = KEY_TO_DIR[key];
     if (dir && state.pacman) {
       state.pacman.want = dir;
-      // Re-evaluate turn choice immediately even if Pac-Man is stationary on this tile.
-      state.pacman.decisionTileKey = null;
     }
   }
 
