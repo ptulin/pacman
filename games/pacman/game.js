@@ -677,6 +677,8 @@
     const dir = KEY_TO_DIR[key];
     if (dir && state.pacman) {
       state.pacman.want = dir;
+      // Re-evaluate turn choice immediately even if Pac-Man is stationary on this tile.
+      state.pacman.decisionTileKey = null;
     }
   }
 
