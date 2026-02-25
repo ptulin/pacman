@@ -249,6 +249,38 @@
     return Boolean(PACMAN_WALKABLE[nextR] && PACMAN_WALKABLE[nextR][nextC]);
   }
 
+  function pacmanWalkableAt(col, row) {
+    return Boolean(PACMAN_WALKABLE[row] && PACMAN_WALKABLE[row][col]);
+  }
+
+  function canAdvancePacman(entity, dirName, stepPx) {
+    const dir = DIRS[dirName];
+    const radius = TILE * 0.38;
+    const nextX = entity.x + dir.x * stepPx;
+    const nextY = entity.y + dir.y * stepPx;
+
+    if (dirName === "left" || dirName === "right") {
+      const edgeX = dirName === "left" ? nextX - radius : nextX + radius;
+      const col = Math.floor(edgeX / TILE);
+      const rowTop = Math.floor((nextY - radius + 1) / TILE);
+      const rowBottom = Math.floor((nextY + radius - 1) / TILE);
+
+      if (col < 0 || col >= COLS) {
+        return WRAP_ROWS.has(rowTop) && WRAP_ROWS.has(rowBottom);
+      }
+      return pacmanWalkableAt(col, rowTop) && pacmanWalkableAt(col, rowBottom);
+    }
+
+    const edgeY = dirName === "up" ? nextY - radius : nextY + radius;
+    const row = Math.floor(edgeY / TILE);
+    const colLeft = Math.floor((nextX - radius + 1) / TILE);
+    const colRight = Math.floor((nextX + radius - 1) / TILE);
+    if (row < 0 || row >= ROWS) {
+      return false;
+    }
+    return pacmanWalkableAt(colLeft, row) && pacmanWalkableAt(colRight, row);
+  }
+
   function tileKeyFor(entity) {
     const tile = pxToTile(entity.x, entity.y);
     return `${tile.c},${tile.r}`;
@@ -305,7 +337,12 @@
     if (blocked) {
       return;
     }
-    moveEntity(p, p.speed + state.level * 3, dt);
+    const speed = p.speed + state.level * 2;
+    if (!canAdvancePacman(p, p.dir, speed * dt)) {
+      snapToTileCenter(p);
+      return;
+    }
+    moveEntity(p, speed, dt);
   }
 
   function currentMode() {
