@@ -5,7 +5,7 @@
   const ROWS = 31;
   const WIDTH = COLS * TILE;
   const HEIGHT = ROWS * TILE;
-  const DECISION_EPSILON = 3;
+  const DECISION_EPSILON = 6;
 
   const MAP_TEMPLATE = [
     "############################",
@@ -261,16 +261,13 @@
   }
 
   function moveEntity(entity, speed, dt) {
-    if (!canMove(entity, entity.dir)) {
-      return;
-    }
-
     const dir = DIRS[entity.dir];
     entity.x += dir.x * speed * dt;
     entity.y += dir.y * speed * dt;
 
-    const tile = pxToTile(entity.x, entity.y);
-    const canWrap = WRAP_ROWS.has(tile.r);
+    const row = Math.max(0, Math.min(ROWS - 1, Math.floor(entity.y / TILE)));
+    const canWrap = WRAP_ROWS.has(row);
+    entity.y = Math.max(TILE / 2, Math.min(HEIGHT - TILE / 2, entity.y));
     if (entity.x < -TILE / 2) {
       entity.x = canWrap ? WIDTH + TILE / 2 : TILE / 2;
     } else if (entity.x > WIDTH + TILE / 2) {
