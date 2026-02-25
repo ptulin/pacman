@@ -5,7 +5,7 @@
   const ROWS = 31;
   const WIDTH = COLS * TILE;
   const HEIGHT = ROWS * TILE;
-  const CENTER_EPSILON = 0.5;
+  const DECISION_EPSILON = 3;
 
   const MAP_TEMPLATE = [
     "############################",
@@ -206,7 +206,17 @@
   function nearCenter(entity) {
     const tile = pxToTile(entity.x, entity.y);
     const center = centerOf(tile.c, tile.r);
-    return Math.abs(center.x - entity.x) <= CENTER_EPSILON && Math.abs(center.y - entity.y) <= CENTER_EPSILON;
+    return Math.abs(center.x - entity.x) <= DECISION_EPSILON && Math.abs(center.y - entity.y) <= DECISION_EPSILON;
+  }
+
+  function alignPerpendicular(entity) {
+    const tile = pxToTile(entity.x, entity.y);
+    const center = centerOf(tile.c, tile.r);
+    if (entity.dir === "left" || entity.dir === "right") {
+      entity.y = center.y;
+    } else {
+      entity.x = center.x;
+    }
   }
 
   function canMove(entity, dirName) {
@@ -238,6 +248,7 @@
 
   function pacmanStep(dt) {
     const p = state.pacman;
+    alignPerpendicular(p);
     const centered = nearCenter(p);
     if (centered) {
       snapToTileCenter(p);
@@ -351,6 +362,7 @@
     }
 
     const mode = currentMode();
+    alignPerpendicular(ghost);
     if (nearCenter(ghost)) {
       snapToTileCenter(ghost);
       chooseGhostDirection(ghost, mode);
