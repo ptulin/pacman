@@ -59,6 +59,12 @@
     down: "up"
   };
 
+  const WRAP_ROWS = new Set(
+    MAP_TEMPLATE
+      .map((row, idx) => (row[0] === " " && row[COLS - 1] === " " ? idx : -1))
+      .filter((idx) => idx >= 0)
+  );
+
   const MODE_SCHEDULE = [
     { mode: "scatter", seconds: 7 },
     { mode: "chase", seconds: 20 },
@@ -226,6 +232,9 @@
     const tile = pxToTile(entity.x, entity.y);
     const nextC = tile.c + dir.x;
     const nextR = tile.r + dir.y;
+    if (nextC < 0 || nextC >= COLS) {
+      return WRAP_ROWS.has(tile.r);
+    }
     return passable(nextC, nextR);
   }
 
@@ -260,10 +269,12 @@
     entity.x += dir.x * speed * dt;
     entity.y += dir.y * speed * dt;
 
+    const tile = pxToTile(entity.x, entity.y);
+    const canWrap = WRAP_ROWS.has(tile.r);
     if (entity.x < -TILE / 2) {
-      entity.x = WIDTH + TILE / 2;
+      entity.x = canWrap ? WIDTH + TILE / 2 : TILE / 2;
     } else if (entity.x > WIDTH + TILE / 2) {
-      entity.x = -TILE / 2;
+      entity.x = canWrap ? -TILE / 2 : WIDTH - TILE / 2;
     }
   }
 
