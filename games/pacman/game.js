@@ -5,7 +5,7 @@
   const ROWS = 31;
   const WIDTH = COLS * TILE;
   const HEIGHT = ROWS * TILE;
-  const DECISION_EPSILON = 6;
+  const DECISION_EPSILON = 2;
 
   const MAP_TEMPLATE = [
     "############################",
@@ -251,23 +251,35 @@
 
   function movePacman(entity, speed, dt) {
     let remaining = speed * dt;
-    const step = 2;
+    const step = 1.5;
     while (remaining > 0) {
-      if (!pacmanCanMove(entity, entity.dir)) {
-        break;
-      }
       const move = Math.min(step, remaining);
       const dir = DIRS[entity.dir];
-      entity.x += dir.x * move;
-      entity.y += dir.y * move;
-      alignPerpendicular(entity);
+      const nextX = entity.x + dir.x * move;
+      const nextY = entity.y + dir.y * move;
+      const nextC = Math.floor(nextX / TILE);
+      const nextR = Math.floor(nextY / TILE);
 
-      const row = Math.max(0, Math.min(ROWS - 1, Math.floor(entity.y / TILE)));
-      if (entity.x < -TILE / 2) {
-        entity.x = WRAP_ROWS.has(row) ? WIDTH + TILE / 2 : TILE / 2;
-      } else if (entity.x > WIDTH + TILE / 2) {
-        entity.x = WRAP_ROWS.has(row) ? -TILE / 2 : WIDTH - TILE / 2;
+      if (nextR < 0 || nextR >= ROWS) {
+        break;
       }
+
+      if (nextC < 0 || nextC >= COLS) {
+        if (!WRAP_ROWS.has(nextR)) {
+          break;
+        }
+        entity.x = nextC < 0 ? WIDTH + TILE / 2 : -TILE / 2;
+        entity.y = nextY;
+        remaining -= move;
+        continue;
+      }
+
+      if (!PACMAN_WALKABLE[nextR][nextC]) {
+        break;
+      }
+
+      entity.x = nextX;
+      entity.y = nextY;
       remaining -= move;
     }
   }
@@ -315,7 +327,6 @@
 
   function pacmanStep(dt) {
     const p = state.pacman;
-    alignPerpendicular(p);
     let blocked = false;
     onDecisionTile(p, () => {
       if (pacmanCanMove(p, p.want)) {
