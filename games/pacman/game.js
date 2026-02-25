@@ -59,11 +59,7 @@
     down: "up"
   };
 
-  const WRAP_ROWS = new Set(
-    MAP_TEMPLATE
-      .map((row, idx) => (row[0] === " " && row[COLS - 1] === " " ? idx : -1))
-      .filter((idx) => idx >= 0)
-  );
+  const WRAP_ROWS = new Set([11]);
 
   const MODE_SCHEDULE = [
     { mode: "scatter", seconds: 7 },
@@ -265,6 +261,10 @@
   }
 
   function moveEntity(entity, speed, dt) {
+    if (!canMove(entity, entity.dir)) {
+      return;
+    }
+
     const dir = DIRS[entity.dir];
     entity.x += dir.x * speed * dt;
     entity.y += dir.y * speed * dt;
