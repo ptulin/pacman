@@ -153,7 +153,7 @@
       y: spawn.y,
       dir: "left",
       want: "left",
-      speed: 82,
+      speed: 72,
       decisionTileKey: null
     };
   }
@@ -327,6 +327,12 @@
 
   function pacmanStep(dt) {
     const p = state.pacman;
+
+    // Allow immediate reverse even between decision points.
+    if (p.want === OPPOSITE[p.dir] && pacmanCanMove(p, p.want)) {
+      p.dir = p.want;
+    }
+
     let blocked = false;
     onDecisionTile(p, () => {
       if (pacmanCanMove(p, p.want)) {
@@ -337,6 +343,23 @@
       }
     });
     if (blocked) {
+      // Recovery path for corner-lock cases: re-center and re-evaluate exits.
+      snapToTileCenter(p);
+      p.decisionTileKey = null;
+      if (pacmanCanMove(p, p.want)) {
+        p.dir = p.want;
+      } else if (!pacmanCanMove(p, p.dir)) {
+        const back = OPPOSITE[p.dir];
+        if (pacmanCanMove(p, back)) {
+          p.dir = back;
+        } else {
+          return;
+        }
+      } else {
+        return;
+      }
+    }
+    if (!pacmanCanMove(p, p.dir)) {
       return;
     }
     const speed = p.speed + state.level;
