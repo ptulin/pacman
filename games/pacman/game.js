@@ -89,6 +89,7 @@
 
   canvas.width = WIDTH;
   canvas.height = HEIGHT;
+  canvas.setAttribute("tabindex", "0");
 
   function cloneGrid() {
     return MAP_TEMPLATE.map((row) => row.split(""));
@@ -570,20 +571,41 @@
     refreshHud();
   }
 
+  const KEY_TO_DIR = {
+    ArrowLeft: "left",
+    Left: "left",
+    a: "left",
+    A: "left",
+    ArrowRight: "right",
+    Right: "right",
+    d: "right",
+    D: "right",
+    ArrowUp: "up",
+    Up: "up",
+    w: "up",
+    W: "up",
+    ArrowDown: "down",
+    Down: "down",
+    s: "down",
+    S: "down"
+  };
+
   function setDirection(key) {
-    if (key === "ArrowLeft" || key.toLowerCase() === "a") {
-      state.pacman.want = "left";
-    } else if (key === "ArrowRight" || key.toLowerCase() === "d") {
-      state.pacman.want = "right";
-    } else if (key === "ArrowUp" || key.toLowerCase() === "w") {
-      state.pacman.want = "up";
-    } else if (key === "ArrowDown" || key.toLowerCase() === "s") {
-      state.pacman.want = "down";
+    const dir = KEY_TO_DIR[key];
+    if (dir && state.pacman) {
+      state.pacman.want = dir;
     }
   }
 
   window.addEventListener("keydown", (evt) => {
+    if (KEY_TO_DIR[evt.key]) {
+      evt.preventDefault();
+      setDirection(evt.key);
+      return;
+    }
+
     if (evt.key === "p" || evt.key === "P") {
+      evt.preventDefault();
       if (!state.gameOver) {
         state.paused = !state.paused;
         if (state.paused) {
@@ -596,14 +618,18 @@
     }
 
     if (evt.key === "Enter" && state.gameOver) {
+      evt.preventDefault();
       startFreshGame();
       return;
     }
+  }, { passive: false });
 
-    setDirection(evt.key);
+  canvas.addEventListener("pointerdown", () => {
+    canvas.focus();
   });
 
   startFreshGame();
+  canvas.focus();
   showMessage("Ready!");
   setTimeout(() => hideMessage(), 900);
   requestAnimationFrame(loop);
