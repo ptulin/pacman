@@ -249,36 +249,27 @@
     return Boolean(PACMAN_WALKABLE[nextR] && PACMAN_WALKABLE[nextR][nextC]);
   }
 
-  function pacmanWalkableAt(col, row) {
-    return Boolean(PACMAN_WALKABLE[row] && PACMAN_WALKABLE[row][col]);
-  }
-
-  function canAdvancePacman(entity, dirName, stepPx) {
-    const dir = DIRS[dirName];
-    const radius = TILE * 0.38;
-    const nextX = entity.x + dir.x * stepPx;
-    const nextY = entity.y + dir.y * stepPx;
-
-    if (dirName === "left" || dirName === "right") {
-      const edgeX = dirName === "left" ? nextX - radius : nextX + radius;
-      const col = Math.floor(edgeX / TILE);
-      const rowTop = Math.floor((nextY - radius + 1) / TILE);
-      const rowBottom = Math.floor((nextY + radius - 1) / TILE);
-
-      if (col < 0 || col >= COLS) {
-        return WRAP_ROWS.has(rowTop) && WRAP_ROWS.has(rowBottom);
+  function movePacman(entity, speed, dt) {
+    let remaining = speed * dt;
+    const step = 2;
+    while (remaining > 0) {
+      if (!pacmanCanMove(entity, entity.dir)) {
+        break;
       }
-      return pacmanWalkableAt(col, rowTop) && pacmanWalkableAt(col, rowBottom);
-    }
+      const move = Math.min(step, remaining);
+      const dir = DIRS[entity.dir];
+      entity.x += dir.x * move;
+      entity.y += dir.y * move;
+      alignPerpendicular(entity);
 
-    const edgeY = dirName === "up" ? nextY - radius : nextY + radius;
-    const row = Math.floor(edgeY / TILE);
-    const colLeft = Math.floor((nextX - radius + 1) / TILE);
-    const colRight = Math.floor((nextX + radius - 1) / TILE);
-    if (row < 0 || row >= ROWS) {
-      return false;
+      const row = Math.max(0, Math.min(ROWS - 1, Math.floor(entity.y / TILE)));
+      if (entity.x < -TILE / 2) {
+        entity.x = WRAP_ROWS.has(row) ? WIDTH + TILE / 2 : TILE / 2;
+      } else if (entity.x > WIDTH + TILE / 2) {
+        entity.x = WRAP_ROWS.has(row) ? -TILE / 2 : WIDTH - TILE / 2;
+      }
+      remaining -= move;
     }
-    return pacmanWalkableAt(colLeft, row) && pacmanWalkableAt(colRight, row);
   }
 
   function tileKeyFor(entity) {
@@ -337,12 +328,8 @@
     if (blocked) {
       return;
     }
-    const speed = p.speed + state.level * 2;
-    if (!canAdvancePacman(p, p.dir, speed * dt)) {
-      snapToTileCenter(p);
-      return;
-    }
-    moveEntity(p, speed, dt);
+    const speed = p.speed + state.level;
+    movePacman(p, speed, dt);
   }
 
   function currentMode() {
