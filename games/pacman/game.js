@@ -60,6 +60,7 @@
   };
 
   const WRAP_ROWS = new Set([11]);
+  const PACMAN_WALKABLE = MAP_TEMPLATE.map((row, r) => row.split("").map((ch) => ch === "." || ch === "o" || (r === 11 && ch === " ")));
 
   const MODE_SCHEDULE = [
     { mode: "scatter", seconds: 7 },
@@ -152,7 +153,7 @@
       y: spawn.y,
       dir: "left",
       want: "left",
-      speed: 105,
+      speed: 82,
       decisionTileKey: null
     };
   }
@@ -234,6 +235,20 @@
     return passable(nextC, nextR);
   }
 
+  function pacmanCanMove(entity, dirName) {
+    const dir = DIRS[dirName];
+    const tile = pxToTile(entity.x, entity.y);
+    const nextC = tile.c + dir.x;
+    const nextR = tile.r + dir.y;
+    if (nextR < 0 || nextR >= ROWS) {
+      return false;
+    }
+    if (nextC < 0 || nextC >= COLS) {
+      return WRAP_ROWS.has(tile.r);
+    }
+    return Boolean(PACMAN_WALKABLE[nextR] && PACMAN_WALKABLE[nextR][nextC]);
+  }
+
   function tileKeyFor(entity) {
     const tile = pxToTile(entity.x, entity.y);
     return `${tile.c},${tile.r}`;
@@ -280,10 +295,10 @@
     alignPerpendicular(p);
     let blocked = false;
     onDecisionTile(p, () => {
-      if (canMove(p, p.want)) {
+      if (pacmanCanMove(p, p.want)) {
         p.dir = p.want;
       }
-      if (!canMove(p, p.dir)) {
+      if (!pacmanCanMove(p, p.dir)) {
         blocked = true;
       }
     });
