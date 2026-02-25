@@ -1,31 +1,46 @@
-# Browser Games Collection
+# Maze Chase (Pac-Man style)
 
-This repository contains original browser games and strategy prototypes.
+This project is an original browser implementation inspired by classic maze-chase gameplay.
 
-## Projects
+Path for hosting:
 
-- `games/pacman/` -> Pac-Man style maze chase game
-- `games/risk-online/` -> Conquest Six (Risk-inspired 2-6 player online strategy)
+- `/games/pacman/index.html`
 
-## Run Pacman
+## Run locally
+
+Any static server works. Example:
 
 ```bash
 cd /Users/patu/Documents/CursorProjects/Games/Pacman
 python3 -m http.server 8080
 ```
 
-Open: `http://localhost:8080/games/pacman/`
+Then open:
 
-## Run Conquest Six (Risk-inspired)
+- `http://localhost:8080/games/pacman/`
+
+## Deploy to disruptiveexperience.com
+
+Upload the `games/pacman` directory to your site so these files exist:
+
+- `/games/pacman/index.html`
+- `/games/pacman/styles.css`
+- `/games/pacman/game.js`
+
+## Create GitHub project
 
 ```bash
-cd /Users/patu/Documents/CursorProjects/Games/Pacman/games/risk-online
-python3 server.py
+cd /Users/patu/Documents/CursorProjects/Games/Pacman
+git init
+git add .
+git commit -m "Add original Pac-Man style maze game"
+git branch -M main
+git remote add origin https://github.com/<your-user>/<your-repo>.git
+git push -u origin main
 ```
 
-Open: `http://localhost:8787`
+If you use GitHub CLI:
 
-## Notes
-
-- Conquest Six v1 is human-only multiplayer (AI planned for a later phase).
-- Max seats: 6 players.
+```bash
+gh repo create <your-repo> --public --source=. --remote=origin --push
+```
