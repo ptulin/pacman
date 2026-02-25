@@ -141,6 +141,7 @@
     levelTimer: 0,
     frightenedTimer: 0,
     frightenedChain: 0,
+    hasStarted: false,
     lastTime: 0,
     pacman: null,
     ghosts: []
@@ -326,6 +327,9 @@
   }
 
   function pacmanStep(dt) {
+    if (!state.hasStarted) {
+      return;
+    }
     const p = state.pacman;
     const speedTiles = p.speedTiles + (state.level - 1) * 0.08;
     movePacman(p, speedTiles * dt);
@@ -689,6 +693,7 @@
     state.lives = 3;
     state.gameOver = false;
     state.paused = false;
+    state.hasStarted = false;
     hideMessage();
     resetLevel(true);
     refreshHud();
@@ -717,6 +722,10 @@
     const dir = KEY_TO_DIR[key];
     if (dir && state.pacman) {
       state.pacman.want = dir;
+      if (!state.hasStarted) {
+        state.hasStarted = true;
+        hideMessage();
+      }
     }
   }
 
@@ -753,7 +762,6 @@
 
   startFreshGame();
   canvas.focus();
-  showMessage("Ready!");
-  setTimeout(() => hideMessage(), 900);
+  showMessage("Press Arrow Keys / WASD to Start");
   requestAnimationFrame(loop);
 })();
